@@ -1,2 +1,2 @@
 # CNE350FinalPiProject
-AI art frame/ChatGPT interface
+AI art frame/ChatGPT query interface
