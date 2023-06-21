@@ -5,7 +5,6 @@ import io
 import openai
 import os
 import pvcobra
-import pvleopard
 import pvporcupine
 import pyaudio
 import random
@@ -20,13 +19,11 @@ import urllib.request
 
 from colorama import Fore, Style
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageEnhance
-from pvleopard import create
-from pvrecorder import PvRecorder
+from pvrecorder import PvRecorder #, create
 from threading import Thread, Event
 from time import sleep
 
 import RPi.GPIO as GPIO
-
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 led1_pin = 4
@@ -39,8 +36,6 @@ pa = None
 porcupine = None
 recorder = None
 wav_file = None
-
-display = auto()
 
 openai.api_key = "put your secret API key between these quotation marks"
 pv_access_key = "put your secret access key between these quotation marks"
@@ -86,7 +81,6 @@ def clean_screen():
         print("\n")
     print("Cleaning complete")
 
-
 def current_time():
     time_now = datetime.datetime.now()
     formatted_time = time_now.strftime("%m-%d-%Y %I:%M %p\n")
@@ -97,7 +91,7 @@ def dall_e2(prompt):
         response = openai.Image.create(
             prompt=prompt,
             n=1,
-            size="512x512" #can also be 256x256 or 1024x1024
+            size="512x512" # Can also be 256x256 or 1024x1024
         )
         return (response['data'][0]['url'])
     except ConnectionResetError:
@@ -105,7 +99,6 @@ def dall_e2(prompt):
         current_time()
 
 def detect_silence():
-
     cobra = pvcobra.create(access_key=pv_access_key)
     silence_pa = pyaudio.PyAudio()
     cobra_audio_stream = silence_pa.open(
@@ -132,7 +125,6 @@ def detect_silence():
                 break
 
 def fade_leds(event):
-
     pwm1 = GPIO.PWM(led1_pin, 200)
 
     event.clear()
@@ -148,9 +140,7 @@ def fade_leds(event):
             time.sleep(0.05)
         time.sleep(0.75)
 
-
 def listen():
-
     cobra = pvcobra.create(access_key=pv_access_key)
     listen_pa = pyaudio.PyAudio()
     listen_audio_stream = listen_pa.open(
@@ -170,21 +160,18 @@ def listen():
             cobra.delete()
             break
 
-
 def refresh():
-
     print("\nThe screen refreshes every day at midnight to help prevent burn-in\n")
     current_time()
     clean_screen()
     sleep(5)
     print("\nRe-rendering")
     display.set_image(img_resized)
-#    display.set_border(display.BLACK)
+    #    display.set_border(display.BLACK)
     display.show()
     print("\nDone")
 
 def refresh_schedule(event2):
-
     schedule.every().day.at("00:00").do(refresh)
     event2.clear()
     while not event2.is_set():
@@ -192,7 +179,6 @@ def refresh_schedule(event2):
         sleep(1)
 
 def wake_word():
-
     porcupine = pvporcupine.create(keywords=["computer", "jarvis", "Art-Frame"],
                             access_key=pv_access_key,
                             sensitivities=[0.1, 0.1, 0.1], #from 0 to 1.0 - a higher number reduces the miss rate at the cost on increased false alarms
@@ -226,9 +212,7 @@ def wake_word():
             os.close(old_stderr)
             Detect = False
 
-
 class Recorder(Thread):
-
     def __init__(self):
         super().__init__()
         self._pcm = list()
@@ -257,19 +241,16 @@ class Recorder(Thread):
 
         return self._pcm
 
-
 try:
-
-    o = create(
-        access_key=pv_access_key,
-        enable_automatic_punctuation=False,
-    )
+    #o = create(
+        #access_key=pv_access_key,
+        #enable_automatic_punctuation=False,
+    #)
 
     event = threading.Event()
     event2 = threading.Event()
 
     while True:
-
         wake_word()
         event2.set()
         recorder = Recorder()
@@ -282,14 +263,7 @@ try:
         recorder.stop()
         if transcript not in Clear_list:
             current_time()
-            # prompt_full = (transcript + (" using vibrant colors"))
-            # this program asks that only bright colors be used because they look more vibrant on e-paper
-            # if you prefer not to do this, comment out the prompt_full line above and uncomment the following line
             prompt_full = transcript
-            # comment out the prior line and uncomment one of the following lines to try pretermined styles
-            #            prompt_full = (transcript + (", using only shades of the colors blue, green, red, white, yellow, orange and black."))
-            #            Style = random.choice(style)
-            #            prompt_full = (transcript + (" in the style of ") + Style + (", using only shades of the colors blue, green, red, white, yellow, orange and black."))
             print("You requested: " + prompt_full)
             print("\nCreating...")
             image_url = dall_e2(prompt_full)
@@ -297,17 +271,8 @@ try:
             img = Image.open(io.BytesIO(raw_data))
             img_bordered = ImageOps.expand(img, border=(76, 0), fill='black')
             img_resized = img_bordered.resize((600, 448), Image.ANTIALIAS)
-
-            #     curr_col = ImageEnhance.Color(img_resized)
-            #     new_col = 2.5
-            #     img_enhanced = curr_col.enhance(new_col)
-            #     img_bordered = ImageOps.expand(img_enhanced, border=(0,76), fill='black')
-
             print("\nRendering...")
             display.set_image(img_resized)
-            #            display.set_border(display.BLACK)
-            # display.show()
-            # uncomment the following line if you also want the image to show on a display connected to the RPi
             img.show()
             event.set()
             GPIO.output(led1_pin, GPIO.LOW)
@@ -315,7 +280,6 @@ try:
             t_refresh = threading.Thread(target=refresh_schedule, args=(event2,))
             t_refresh.start()
             print("\nDone")
-
         else:
             print("Clearing the display...")
             clean_screen()
